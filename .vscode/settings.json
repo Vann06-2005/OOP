@@ -1,0 +1,13 @@
+{
+  "java.project.sourcePaths": ["src"],
+  "java.project.outputPath": "bin",
+  "java.project.referencedLibraries": {
+    "include": [
+      "lib/**/*.jar",
+      "c:\\Users\\sovan\\Downloads\\postgresql-42.7.8.jar"
+    ],
+    "exclude": [
+      "lib/postgresql-42.7.8.jar"
+    ]
+  }
+}

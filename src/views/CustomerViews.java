@@ -1,0 +1,226 @@
+package views;
+
+import controllers.BookingController;
+import controllers.ScheduleController;
+import models.Booking;
+import models.Schedule;
+import models.User;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.util.List;
+
+public class CustomerViews extends JPanel {
+    private MainApp mainApp;
+    private User currentUser;
+    
+    // UI Components
+    private JTextField fromField, toField;
+    private JPanel resultsListPanel; // Container for the cards
+    private JButton searchBtn, historyBtn;
+
+    public CustomerViews(MainApp app, User user) {
+        this.mainApp = app;
+        this.currentUser = user;
+        
+        setLayout(new BorderLayout());
+        setBackground(Color.WHITE);
+
+        // --- TOP SECTION: Header & Search Form ---
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+        topPanel.setBackground(Color.WHITE);
+        topPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // 1. Header (Hello User + Logout)
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(Color.WHITE);
+        JLabel title = new JLabel("Hello, " + user.getFullName());
+        title.setFont(new Font("SansSerif", Font.BOLD, 18));
+        
+        JButton logoutBtn = new JButton("Logout");
+        logoutBtn.addActionListener(e -> mainApp.logout());
+        
+        header.add(title, BorderLayout.WEST);
+        header.add(logoutBtn, BorderLayout.EAST);
+        topPanel.add(header);
+        topPanel.add(Box.createVerticalStrut(20)); // Spacer
+
+        // 2. Search Inputs (From, To)
+        topPanel.add(createInputLabel("From City:"));
+        fromField = createStyledField();
+        topPanel.add(fromField);
+        topPanel.add(Box.createVerticalStrut(10));
+
+        topPanel.add(createInputLabel("To Destination:"));
+        toField = createStyledField();
+        topPanel.add(toField);
+        topPanel.add(Box.createVerticalStrut(20));
+
+        // 3. Action Buttons (Search & History)
+        JPanel buttonRow = new JPanel(new GridLayout(1, 2, 10, 0)); // 2 columns, 10px gap
+        buttonRow.setBackground(Color.WHITE);
+        
+        searchBtn = new JButton("Search Buses");
+        searchBtn.setBackground(new Color(50, 150, 250));
+        searchBtn.setForeground(Color.WHITE);
+        searchBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        searchBtn.setPreferredSize(new Dimension(0, 45));
+
+        historyBtn = new JButton("My History");
+        historyBtn.setBackground(new Color(240, 240, 240));
+        historyBtn.setForeground(Color.BLACK);
+        historyBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+
+        buttonRow.add(searchBtn);
+        buttonRow.add(historyBtn);
+        topPanel.add(buttonRow);
+        
+        add(topPanel, BorderLayout.NORTH);
+
+        // --- BOTTOM SECTION: Scrollable Results ---
+        resultsListPanel = new JPanel();
+        resultsListPanel.setLayout(new BoxLayout(resultsListPanel, BoxLayout.Y_AXIS));
+        resultsListPanel.setBackground(new Color(245, 245, 245)); // Light gray background for list
+        
+        // Wrap it in a ScrollPane
+        JScrollPane scrollPane = new JScrollPane(resultsListPanel);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16); // Smooth scrolling
+        
+        add(scrollPane, BorderLayout.CENTER);
+
+        // --- ACTIONS ---
+        searchBtn.addActionListener(e -> performSearch());
+        historyBtn.addActionListener(e -> showHistoryPopup());
+    }
+
+    // Helper to style inputs
+    private JTextField createStyledField() {
+        JTextField f = new JTextField();
+        f.setPreferredSize(new Dimension(999, 40));
+        f.setMaximumSize(new Dimension(999, 40)); // Prevent horizontal shrinking
+        f.setFont(new Font("SansSerif", Font.PLAIN, 16));
+        return f;
+    }
+    
+    private JLabel createInputLabel(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        l.setForeground(Color.GRAY);
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return l;
+    }
+
+    // --- LOGIC: SEARCH & POPULATE CARDS ---
+    private void performSearch() {
+        String from = fromField.getText();
+        String to = toField.getText();
+        
+        resultsListPanel.removeAll(); // Clear old results
+        resultsListPanel.revalidate();
+        resultsListPanel.repaint();
+        
+        searchBtn.setEnabled(false);
+        searchBtn.setText("Searching...");
+
+        new SwingWorker<List<Schedule>, Void>() {
+            @Override
+            protected List<Schedule> doInBackground() {
+                return ScheduleController.getInstance().searchTrips(from, to);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<Schedule> results = get();
+                    if (results.isEmpty()) {
+                        JLabel noData = new JLabel("No buses found.", SwingConstants.CENTER);
+                        noData.setBorder(new EmptyBorder(20,0,0,0));
+                        resultsListPanel.add(noData);
+                    } else {
+                        // Create a "Card" for each result using the external BusCardPanel class
+                        for (Schedule s : results) {
+                            BusCardPanel card = new BusCardPanel(s, e -> initiateBooking(s));
+                            resultsListPanel.add(card);
+                            resultsListPanel.add(Box.createVerticalStrut(10)); // Gap between cards
+                        }
+                    }
+                    resultsListPanel.revalidate();
+                    resultsListPanel.repaint();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    searchBtn.setEnabled(true);
+                    searchBtn.setText("Search Buses");
+                }
+            }
+        }.execute();
+    }
+
+    // --- LOGIC: BOOKING ---
+    private void initiateBooking(Schedule schedule) {
+        int totalSeats = schedule.getBus().getTotalSeats();
+        
+        new SwingWorker<List<String>, Void>() {
+            @Override
+            protected List<String> doInBackground() {
+                return BookingController.getInstance().getTakenSeats(schedule.getId());
+            }
+            @Override
+            protected void done() {
+                try {
+                    List<String> taken = get();
+                    StringBuilder msg = new StringBuilder("Enter Seat (1-" + totalSeats + "):\n");
+                    if(!taken.isEmpty()) msg.append("Taken: ").append(String.join(", ", taken));
+                    
+                    String input = JOptionPane.showInputDialog(CustomerViews.this, msg.toString());
+                    if(input != null && !input.trim().isEmpty()) {
+                         // Check number format first
+                        try {
+                            int seatNum = Integer.parseInt(input.trim());
+                            if (seatNum < 1 || seatNum > totalSeats) {
+                                JOptionPane.showMessageDialog(CustomerViews.this, "Invalid Seat Number!");
+                                return;
+                            }
+                            Booking newBooking = new Booking(null, currentUser, schedule, String.valueOf(seatNum), schedule.getTicketPrice());
+                            performBooking(newBooking);
+                        } catch (NumberFormatException nfe) {
+                            JOptionPane.showMessageDialog(CustomerViews.this, "Please enter a number.");
+                        }
+                    }
+                } catch(Exception ex) { ex.printStackTrace(); }
+            }
+        }.execute();
+    }
+
+    private void performBooking(Booking newBooking) {
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() {
+                return BookingController.getInstance().createBooking(newBooking);
+            }
+            @Override
+            protected void done() {
+                try {
+                    if (get()) {
+                        JOptionPane.showMessageDialog(CustomerViews.this, "Booking Confirmed!");
+                        performSearch(); // Refresh list to update seats
+                    } else {
+                        JOptionPane.showMessageDialog(CustomerViews.this, "Booking Failed (Seat Taken).");
+                    }
+                } catch (Exception e) { e.printStackTrace(); }
+            }
+        }.execute();
+    }
+
+    // --- LOGIC: HISTORY POPUP ---
+    private void showHistoryPopup() {
+        JDialog historyDialog = new JDialog(SwingUtilities.getWindowAncestor(this), "My History", Dialog.ModalityType.APPLICATION_MODAL);
+        historyDialog.setSize(400, 600);
+        historyDialog.setLocationRelativeTo(this);
+        historyDialog.add(new HistoryPanel(currentUser)); // Uses the reusable file
+        historyDialog.setVisible(true);
+    }
+}
