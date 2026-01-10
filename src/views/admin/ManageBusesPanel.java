@@ -138,7 +138,7 @@ public class ManageBusesPanel extends JPanel {
             }
         }.execute();
     }
-
+// Update part
     private void handleUpdate() {
         if (selectedBus == null) {
             JOptionPane.showMessageDialog(this, "Select a bus to update.");
@@ -177,7 +177,7 @@ public class ManageBusesPanel extends JPanel {
             }
         }.execute();
     }
-
+//   Delete part
     private void handleDelete() {
         if (selectedBus == null) {
             JOptionPane.showMessageDialog(this, "Select a bus to delete.");

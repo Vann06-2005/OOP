@@ -8,7 +8,8 @@ import models.*;
 
 public class BookingController {
 
-    private static BookingController instance;
+    private static BookingController instance; // Singleton Pattern
+
 
     private BookingController() {
     }
@@ -151,5 +152,73 @@ public class BookingController {
             e.printStackTrace();
         }
         return userBookings;
+    }
+
+    public boolean cancelBooking(Long bookingId, Long userId) {
+        String selectSql = "SELECT schedule_id FROM bookings WHERE id = ? AND user_id = ? AND status = 'CONFIRMED' FOR UPDATE";
+        String updateBookingSql = "UPDATE bookings SET status = 'CANCELLED' WHERE id = ? AND user_id = ? AND status = 'CONFIRMED'";
+        String updateScheduleSql = "UPDATE schedules SET available_seats = available_seats + 1 WHERE id = ?";
+
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                return false;
+            }
+            conn.setAutoCommit(false);
+
+            Long scheduleId = null;
+            try (PreparedStatement stmt = conn.prepareStatement(selectSql)) {
+                stmt.setLong(1, bookingId);
+                stmt.setLong(2, userId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        scheduleId = rs.getLong("schedule_id");
+                    }
+                }
+            }
+
+            if (scheduleId == null) {
+                conn.rollback();
+                return false; // Nothing to cancel (not found or already cancelled)
+            }
+
+            try (PreparedStatement stmt = conn.prepareStatement(updateBookingSql)) {
+                stmt.setLong(1, bookingId);
+                stmt.setLong(2, userId);
+                int affected = stmt.executeUpdate();
+                if (affected == 0) {
+                    conn.rollback();
+                    return false;
+                }
+            }
+
+            try (PreparedStatement stmt = conn.prepareStatement(updateScheduleSql)) {
+                stmt.setLong(1, scheduleId);
+                stmt.executeUpdate();
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            return false;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }

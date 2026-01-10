@@ -9,13 +9,13 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
-import views.MainApp;
+import views.Login;
 
 public class AdminViews extends JPanel {
-    private MainApp mainApp;
+    private Login loginApp;
 
-    public AdminViews(MainApp app) {
-        this.mainApp = app;
+    public AdminViews(Login app) {
+        this.loginApp = app;
 
         setLayout(new BorderLayout(15, 15));
         setBackground(new Color(245, 247, 250));
@@ -38,7 +38,7 @@ public class AdminViews extends JPanel {
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.setFocusPainted(false);
         logoutBtn.setBackground(Color.WHITE);
-        logoutBtn.addActionListener(e -> mainApp.logout());
+        logoutBtn.addActionListener(e -> loginApp.logout());
         headerRight.add(welcome);
         headerRight.add(logoutBtn);
         header.add(headerRight, BorderLayout.EAST);

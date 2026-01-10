@@ -9,13 +9,14 @@ import models.User;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
 public class CustomerViews extends JPanel {
-    private MainApp mainApp;
+    private Login loginApp;
     private User currentUser;
     
     // UI Components
@@ -24,8 +25,8 @@ public class CustomerViews extends JPanel {
     private JButton searchBtn, historyBtn;
     private static final String SELECT_CITY = "Select City";
 
-    public CustomerViews(MainApp app, User user) {
-        this.mainApp = app;
+    public CustomerViews(Login app, User user) {
+        this.loginApp = app;
         this.currentUser = user;
         
         setLayout(new BorderLayout());
@@ -44,7 +45,7 @@ public class CustomerViews extends JPanel {
         title.setFont(new Font("SansSerif", Font.BOLD, 18));
         
         JButton logoutBtn = new JButton("Logout");
-        logoutBtn.addActionListener(e -> mainApp.logout());
+        logoutBtn.addActionListener(e -> loginApp.logout());
         
         header.add(title, BorderLayout.WEST);
         header.add(logoutBtn, BorderLayout.EAST);
@@ -240,6 +241,7 @@ public class CustomerViews extends JPanel {
     }
 
     private void performBooking(Booking newBooking) {
+        BigDecimal price = newBooking.getTotalAmount();
         new SwingWorker<Boolean, Void>() {
             @Override
             protected Boolean doInBackground() {
@@ -249,7 +251,7 @@ public class CustomerViews extends JPanel {
             protected void done() {
                 try {
                     if (get()) {
-                        JOptionPane.showMessageDialog(CustomerViews.this, "Booking Confirmed!");
+                        JOptionPane.showMessageDialog(CustomerViews.this, "Booking Confirmed!" + "   Price: " + price);
                         performSearch(); // Refresh list to update seats
                     } else {
                         JOptionPane.showMessageDialog(CustomerViews.this, "Booking Failed (Seat Taken).");
@@ -261,10 +263,16 @@ public class CustomerViews extends JPanel {
 
     // --- LOGIC: HISTORY POPUP ---
     private void showHistoryPopup() {
-        JDialog historyDialog = new JDialog(SwingUtilities.getWindowAncestor(this), "My History", Dialog.ModalityType.APPLICATION_MODAL);
-        historyDialog.setSize(400, 600);
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        JDialog historyDialog = new JDialog(owner, "My History", Dialog.ModalityType.APPLICATION_MODAL);
+        HistoryPanel historyPanel = new HistoryPanel(currentUser);
+        historyDialog.add(historyPanel);
+
+        // Match phone-friendly size
+        int width = (owner != null) ? owner.getWidth() - 20 : 430;
+        int height = (owner != null) ? Math.min(owner.getHeight() - 80, 800) : 720;
+        historyDialog.setSize(width, height);
         historyDialog.setLocationRelativeTo(this);
-        historyDialog.add(new HistoryPanel(currentUser)); // Uses the reusable file
         historyDialog.setVisible(true);
     }
 }

@@ -5,7 +5,10 @@ import javax.swing.*;
 import models.User;
 import views.admin.AdminViews;
 
-public class MainApp extends JFrame {
+/**
+ * Hosts the login/register UI and swaps to customer or admin views after authentication.
+ */
+public class Login extends JFrame {
 
     private CardLayout cardLayout;
     private JPanel mainPanel;
@@ -34,15 +37,11 @@ public class MainApp extends JFrame {
     public static final String ADMIN_VIEW = "ADMIN";
     public static final String CUSTOMER_VIEW = "CUSTOMER";
 
-    public MainApp() {
-        setTitle("EazyBus Mobile"); // Updated Window Title
-
-        // --- IPHONE 14 PRO MAX DIMENSIONS ---
-        // Width: 430px, Height: 932px 
+    public Login() {
+        setTitle("EazyBus Mobile");
         setPhoneMode();
 
         setResizable(false); // Lock the size so it feels like a phone
-        
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); // Center on screen
 
@@ -60,45 +59,33 @@ public class MainApp extends JFrame {
         showScreen(LOGIN_VIEW);
     }
 
-    // ... (Keep the showScreen, loginSuccess, logout, getCurrentUser, and main methods  the same) ...
     public void showScreen(String screenName) {
         cardLayout.show(mainPanel, screenName);
     }
-    //// miskake when do this all panel is phone size
-    // public void loginSuccess(User user) {
-    //     this.currentUser = user;
-    //     if ("ADMIN".equalsIgnoreCase(user.getRole())) {
-    //         mainPanel.add(new AdminViews(this), ADMIN_VIEW);
-    //         showScreen(ADMIN_VIEW);
-    //     } else {
-    //         mainPanel.add(new CustomerViews(this, user), CUSTOMER_VIEW);
-    //         showScreen(CUSTOMER_VIEW);
-    //     }
-    // }
 
     public void loginSuccess(User user) {
-    this.currentUser = user;
+        this.currentUser = user;
 
-    // Remove old Admin/Customer view if they already exist
-    for (Component c : mainPanel.getComponents()) {
-        if (c instanceof AdminViews || c instanceof CustomerViews) {
-            mainPanel.remove(c);
+        // Remove old Admin/Customer view if they already exist
+        for (Component c : mainPanel.getComponents()) {
+            if (c instanceof AdminViews || c instanceof CustomerViews) {
+                mainPanel.remove(c);
+            }
         }
-    }
 
-    if ("ADMIN".equalsIgnoreCase(user.getRole())) {
-        setAdminMode();
-        mainPanel.add(new AdminViews(this), ADMIN_VIEW);
-        showScreen(ADMIN_VIEW);
-    } else {
-        setPhoneMode();
-        mainPanel.add(new CustomerViews(this, user), CUSTOMER_VIEW);
-        showScreen(CUSTOMER_VIEW);
-    }
+        if ("ADMIN".equalsIgnoreCase(user.getRole())) {
+            setAdminMode();
+            mainPanel.add(new AdminViews(this), ADMIN_VIEW);
+            showScreen(ADMIN_VIEW);
+        } else {
+            setPhoneMode();
+            mainPanel.add(new CustomerViews(this, user), CUSTOMER_VIEW);
+            showScreen(CUSTOMER_VIEW);
+        }
 
-    mainPanel.revalidate();
-    mainPanel.repaint();
-}
+        mainPanel.revalidate();
+        mainPanel.repaint();
+    }
 
 
     public void logout() {
@@ -109,11 +96,5 @@ public class MainApp extends JFrame {
 
     public User getCurrentUser() {
         return currentUser;
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new MainApp().setVisible(true);
-        });
     }
 }

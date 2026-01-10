@@ -10,22 +10,22 @@ public class AuthViews {
 
     // --- LOGIN PANEL ---
     public static class LoginPanel extends JPanel {
-        private MainApp mainApp;
+        private Login loginApp;
         private JTextField userField;
         private JPasswordField passField;
         private JButton loginBtn, goToRegisterBtn;
         private JLabel statusLabel;
 
-       public LoginPanel(MainApp app) {
-            this.mainApp = app;
+        public LoginPanel(Login app) {
+            this.loginApp = app;
             setLayout(new GridBagLayout());
             setBackground(Color.WHITE); // Mobile apps usually have white/clean backgrounds
-            
+
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(10, 20, 10, 20); // Add side padding like a phone screen
             gbc.fill = GridBagConstraints.HORIZONTAL; // Make inputs stretch
             gbc.gridx = 0;
-            
+
             // 1. APP NAME (EazyBus)
             JLabel appName = new JLabel("EazyBus", SwingConstants.CENTER);
             appName.setFont(new Font("SansSerif", Font.BOLD, 40));
@@ -46,7 +46,7 @@ public class AuthViews {
             gbc.insets = new Insets(5, 20, 5, 20); // Reset padding
             gbc.gridy = 2;
             add(new JLabel("Username"), gbc);
-            
+
             userField = new JTextField(20);
             userField.setFont(new Font("SansSerif", Font.PLAIN, 16)); // Larger text for mobile
             userField.setPreferredSize(new Dimension(0, 40)); // Taller input box (touch friendly)
@@ -56,7 +56,7 @@ public class AuthViews {
             // 4. Password Field
             gbc.gridy = 4;
             add(new JLabel("Password"), gbc);
-            
+
             passField = new JPasswordField(20);
             passField.setFont(new Font("SansSerif", Font.PLAIN, 16));
             passField.setPreferredSize(new Dimension(0, 40));
@@ -70,7 +70,7 @@ public class AuthViews {
             loginBtn.setForeground(Color.WHITE);
             loginBtn.setFocusPainted(false);
             loginBtn.setPreferredSize(new Dimension(0, 50)); // Big button
-            
+
             gbc.gridy = 6;
             gbc.insets = new Insets(30, 20, 10, 20); // Gap before button
             add(loginBtn, gbc);
@@ -81,7 +81,7 @@ public class AuthViews {
             goToRegisterBtn.setContentAreaFilled(false);
             goToRegisterBtn.setForeground(Color.BLUE);
             goToRegisterBtn.setFont(new Font("SansSerif", Font.PLAIN, 14));
-            
+
             gbc.gridy = 7;
             gbc.insets = new Insets(0, 20, 20, 20);
             add(goToRegisterBtn, gbc);
@@ -94,9 +94,10 @@ public class AuthViews {
 
             // Actions
             loginBtn.addActionListener(this::handleLogin);
-            goToRegisterBtn.addActionListener(e -> mainApp.showScreen(MainApp.REGISTER_VIEW));
+            goToRegisterBtn.addActionListener(e -> loginApp.showScreen(Login.REGISTER_VIEW));
         }
-        //ACTION FOR LOG IN 
+
+        // ACTION FOR LOG IN
         private void handleLogin(ActionEvent e) {
             String user = userField.getText();
             String pass = new String(passField.getPassword());
@@ -110,14 +111,14 @@ public class AuthViews {
                 protected User doInBackground() {
                     return UserController.getInstance().login(user, pass);
                 }
- 
+
                 @Override
                 protected void done() {
                     try {
                         User result = get();
                         if (result != null) {
                             statusLabel.setText("Success!");
-                            mainApp.loginSuccess(result);
+                            loginApp.loginSuccess(result);
                         } else {
                             statusLabel.setText("Invalid credentials.");
                         }
@@ -131,16 +132,17 @@ public class AuthViews {
             }.execute();
         }
     }
+
     // --- REGISTER PANEL (Mobile Style) ---
     public static class RegisterPanel extends JPanel {
-        private MainApp mainApp;
+        private Login loginApp;
         private JTextField userField;
         private JPasswordField passField;
         private JButton registerBtn, backBtn;
         private JLabel statusLabel;
 
-        public RegisterPanel(MainApp app) {
-            this.mainApp = app;
+        public RegisterPanel(Login app) {
+            this.loginApp = app;
             setLayout(new GridBagLayout());
             setBackground(Color.WHITE); // Clean mobile background
 
@@ -216,7 +218,7 @@ public class AuthViews {
             add(statusLabel, gbc);
 
             // Actions
-            backBtn.addActionListener(e -> mainApp.showScreen(MainApp.LOGIN_VIEW));
+            backBtn.addActionListener(e -> loginApp.showScreen(Login.LOGIN_VIEW));
             registerBtn.addActionListener(this::handleRegister);
         }
 
@@ -247,7 +249,7 @@ public class AuthViews {
                     try {
                         if (get()) {
                             JOptionPane.showMessageDialog(RegisterPanel.this, "Success! Please Login.");
-                            mainApp.showScreen(MainApp.LOGIN_VIEW);
+                            loginApp.showScreen(Login.LOGIN_VIEW);
                             // Clear fields
                             userField.setText("");
                             passField.setText("");
