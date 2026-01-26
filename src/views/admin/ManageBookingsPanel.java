@@ -2,24 +2,20 @@ package views.admin;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableModel;
 import controllers.BookingController;
+import controllers.UserController;
 import models.Booking;
 import models.Schedule;
 
@@ -27,52 +23,29 @@ import models.Schedule;
 public class ManageBookingsPanel extends JPanel {
     private final DefaultTableModel tableModel;
     private final JTable bookingTable;
-    private final JTextField userIdField;
-    private final JButton loadAllBtn, filterBtn, clearBtn, cancelBtn, refreshBtn;
+    private final JButton loadAllBtn, refreshBtn, cancelBtn, deleteUserBtn;
 
     private List<Booking> bookings = new ArrayList<>();
     private Booking selectedBooking;
-    private Long currentFilterUserId;
 
     public ManageBookingsPanel() {
         setLayout(new BorderLayout(10, 10));
         setBackground(Color.WHITE);
 
-        JPanel filterPanel = new JPanel(new GridBagLayout());
-        filterPanel.setOpaque(false);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        filterPanel.add(new JLabel("Filter by User ID:"), gbc);
-
-        userIdField = new JTextField();
-        gbc.gridx = 1;
-        filterPanel.add(userIdField, gbc);
-
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        buttons.setOpaque(false);
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        actionPanel.setOpaque(false);
         loadAllBtn = new JButton("Load All");
-        filterBtn = new JButton("Apply Filter");
-        clearBtn = new JButton("Clear");
         refreshBtn = new JButton("Refresh");
         cancelBtn = new JButton("Cancel Booking");
+        deleteUserBtn = new JButton("Delete User");
         cancelBtn.setEnabled(false);
-        buttons.add(loadAllBtn);
-        buttons.add(filterBtn);
-        buttons.add(clearBtn);
-        buttons.add(refreshBtn);
-        buttons.add(cancelBtn);
+        deleteUserBtn.setEnabled(false);
+        actionPanel.add(loadAllBtn);
+        actionPanel.add(refreshBtn);
+        actionPanel.add(cancelBtn);
+        actionPanel.add(deleteUserBtn);
 
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 2;
-        filterPanel.add(buttons, gbc);
-
-        add(filterPanel, BorderLayout.NORTH);
+        add(actionPanel, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(
                 new Object[] { "ID", "User", "Route", "Bus", "Departure", "Seat", "Amount", "Status", "Booked At" },
@@ -94,30 +67,12 @@ public class ManageBookingsPanel extends JPanel {
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230)));
         add(scrollPane, BorderLayout.CENTER);
 
-        loadAllBtn.addActionListener(e -> loadBookings(null));
-        filterBtn.addActionListener(e -> handleFilter());
-        clearBtn.addActionListener(e -> {
-            userIdField.setText("");
-            loadBookings(null);
-        });
-        refreshBtn.addActionListener(e -> loadBookings(currentFilterUserId));
+        loadAllBtn.addActionListener(e -> loadBookings());
+        refreshBtn.addActionListener(e -> loadBookings());
         cancelBtn.addActionListener(e -> handleCancel());
+        deleteUserBtn.addActionListener(e -> handleDeleteUser());
 
-        loadBookings(null);
-    }
-
-    private void handleFilter() {
-        String text = userIdField.getText().trim();
-        if (text.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Enter a user ID to filter bookings.");
-            return;
-        }
-        try {
-            Long userId = Long.parseLong(text);
-            loadBookings(userId);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "User ID must be a number.");
-        }
+        loadBookings();
     }
 
     private void handleCancel() {
@@ -151,7 +106,7 @@ public class ManageBookingsPanel extends JPanel {
                 try {
                     if (get()) {
                         JOptionPane.showMessageDialog(ManageBookingsPanel.this, "Booking cancelled.");
-                        loadBookings(currentFilterUserId);
+                        loadBookings();
                     } else {
                         JOptionPane.showMessageDialog(ManageBookingsPanel.this,
                                 "Unable to cancel booking. Please try again.");
@@ -166,28 +121,74 @@ public class ManageBookingsPanel extends JPanel {
         }.execute();
     }
 
+    private void handleDeleteUser() {
+        if (selectedBooking == null || selectedBooking.getCustomer() == null) {
+            JOptionPane.showMessageDialog(this, "Select a booking to choose which user to delete.");
+            return;
+        }
+        Long userId = selectedBooking.getCustomer().getId();
+        if (userId == null) {
+            JOptionPane.showMessageDialog(this, "Selected booking does not have a user ID.");
+            return;
+        }
+
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                "Delete user \"" + selectedBooking.getCustomer().getFullName() + "\" (ID: " + userId + ")?\n"
+                        + "This will remove the user account.",
+                "Confirm Delete User", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        deleteUserBtn.setEnabled(false);
+        cancelBtn.setEnabled(false);
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() {
+                return UserController.getInstance().deleteUser(userId);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    if (get()) {
+                        JOptionPane.showMessageDialog(ManageBookingsPanel.this, "User deleted.");
+                        loadBookings();
+                    } else {
+                        JOptionPane.showMessageDialog(ManageBookingsPanel.this,
+                                "Unable to delete user. Please try again.");
+                        deleteUserBtn.setEnabled(true);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(ManageBookingsPanel.this,
+                            "Error deleting user: " + ex.getMessage());
+                    deleteUserBtn.setEnabled(true);
+                }
+            }
+        }.execute();
+    }
+
     private void syncSelectionFromTable() {
         int selectedRow = bookingTable.getSelectedRow();
         if (selectedRow >= 0 && selectedRow < bookings.size()) {
             selectedBooking = bookings.get(selectedRow);
             cancelBtn.setEnabled(!"CANCELLED".equalsIgnoreCase(selectedBooking.getStatus()));
+            deleteUserBtn.setEnabled(true);
         } else {
             selectedBooking = null;
             cancelBtn.setEnabled(false);
+            deleteUserBtn.setEnabled(false);
         }
     }
 
-    private void loadBookings(Long userId) {
-        currentFilterUserId = userId;
+    private void loadBookings() {
         cancelBtn.setEnabled(false);
+        deleteUserBtn.setEnabled(false);
         new SwingWorker<List<Booking>, Void>() {
             @Override
             protected List<Booking> doInBackground() {
-                BookingController controller = BookingController.getInstance();
-                if (userId != null) {
-                    return controller.getBookingsForUser(userId);
-                }
-                return controller.getAllBookings();
+                return BookingController.getInstance().getAllBookings();
             }
 
             @Override

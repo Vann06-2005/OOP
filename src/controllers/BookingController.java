@@ -113,7 +113,7 @@ public class BookingController {
     }
 
    public List<String> getTakenSeats(Long scheduleId) {
-    List<String> takenSeats = new ArrayList<>();
+    List<String> takenSeats = new ArrayList<>();    
     String sql = "SELECT seat_number FROM bookings WHERE schedule_id = ? AND status = 'CONFIRMED'";
 
     try (Connection conn = DatabaseConnection.getConnection();
