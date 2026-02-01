@@ -4,6 +4,7 @@ import controllers.BookingController;
 import controllers.ScheduleController;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -224,6 +225,11 @@ public class CustomerViews extends JPanel {
 
     // --- LOGIC: BOOKING ---
     private void initiateBooking(Schedule schedule) {
+        LocalDateTime departureTime = schedule.getDepartureTime();
+        if (departureTime != null && departureTime.isBefore(LocalDateTime.now())) {
+            JOptionPane.showMessageDialog(this, "This bus has already departed.");
+            return;
+        }
         int totalSeats = schedule.getBus().getTotalSeats();
 
         new SwingWorker<List<String>, Void>() {
@@ -278,7 +284,12 @@ public class CustomerViews extends JPanel {
                         JOptionPane.showMessageDialog(CustomerViews.this, "Booking Confirmed!" + "   Price: " + price);
                         performSearch(); // Refresh list to update seats
                     } else {
-                        JOptionPane.showMessageDialog(CustomerViews.this, "Booking Failed (Seat Taken).");
+                        LocalDateTime departureTime = newBooking.getSchedule().getDepartureTime();
+                        if (departureTime != null && departureTime.isBefore(LocalDateTime.now())) {
+                            JOptionPane.showMessageDialog(CustomerViews.this, "Booking Failed: This bus already departed.");
+                        } else {
+                            JOptionPane.showMessageDialog(CustomerViews.this, "Booking Failed (Seat Taken).");
+                        }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

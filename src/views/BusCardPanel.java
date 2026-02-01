@@ -4,6 +4,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import models.Schedule;
 
 public class BusCardPanel extends JPanel {
@@ -17,7 +19,7 @@ public class BusCardPanel extends JPanel {
         ));
         
         // --- CENTER: Trip Info ---
-        JPanel infoPanel = new JPanel(new GridLayout(3, 1));
+        JPanel infoPanel = new JPanel(new GridLayout(0, 1));
         infoPanel.setBackground(Color.WHITE);
         infoPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
@@ -40,6 +42,23 @@ public class BusCardPanel extends JPanel {
         infoPanel.add(routeLabel);
         infoPanel.add(busLabel);
         infoPanel.add(priceLabel);
+
+        LocalDateTime departureTime = schedule.getDepartureTime();
+        boolean departed = departureTime != null && departureTime.isBefore(LocalDateTime.now());
+        if (departureTime != null && !departed) {
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            JLabel departureLabel = new JLabel("Departure: " + departureTime.format(fmt));
+            departureLabel.setForeground(Color.DARK_GRAY);
+            departureLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            infoPanel.add(departureLabel);
+        }
+        if (departureTime != null && departed) {
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            JLabel departedLabel = new JLabel("Departed: " + departureTime.format(fmt));
+            departedLabel.setForeground(new Color(180, 0, 0));
+            departedLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            infoPanel.add(departedLabel);
+        }
         add(infoPanel, BorderLayout.CENTER);
 
         // --- RIGHT: Book Button ---
@@ -49,6 +68,10 @@ public class BusCardPanel extends JPanel {
         bookBtn.setFocusPainted(false);
         bookBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
         bookBtn.addActionListener(onBookClicked);
+        if (departed) {
+            bookBtn.setEnabled(false);
+            bookBtn.setToolTipText("This bus has already departed.");
+        }
         
         JPanel btnWrapper = new JPanel(new GridBagLayout());
         btnWrapper.setBackground(Color.WHITE);

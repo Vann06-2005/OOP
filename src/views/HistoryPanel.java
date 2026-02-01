@@ -137,14 +137,28 @@ public class HistoryPanel extends JPanel {
         JLabel seatPrice = new JLabel("Seat " + booking.getSeatNumber() + " • " + currencyFmt.format(booking.getTotalAmount()));
         seatPrice.setFont(new Font("SansSerif", Font.PLAIN, 12));
 
+        boolean isConfirmed = "CONFIRMED".equalsIgnoreCase(booking.getStatus());
+        boolean isCancelled = "CANCELLED".equalsIgnoreCase(booking.getStatus());
+
         JButton cancelBtn = new JButton("Cancel");
         cancelBtn.setFocusPainted(false);
         cancelBtn.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        cancelBtn.setVisible("CONFIRMED".equalsIgnoreCase(booking.getStatus()));
+        cancelBtn.setVisible(isConfirmed);
         cancelBtn.addActionListener(e -> cancelBooking(booking, cancelBtn));
 
+        JButton deleteBtn = new JButton("Delete");
+        deleteBtn.setFocusPainted(false);
+        deleteBtn.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        deleteBtn.setVisible(isCancelled);
+        deleteBtn.addActionListener(e -> deleteBooking(booking, deleteBtn));
+
+        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        actionsPanel.setOpaque(false);
+        actionsPanel.add(cancelBtn);
+        actionsPanel.add(deleteBtn);
+
         bottomRow.add(seatPrice, BorderLayout.WEST);
-        bottomRow.add(cancelBtn, BorderLayout.EAST);
+        bottomRow.add(actionsPanel, BorderLayout.EAST);
 
         card.add(topRow, BorderLayout.NORTH);
         card.add(routeLabel, BorderLayout.CENTER);
@@ -186,6 +200,48 @@ public class HistoryPanel extends JPanel {
                 } catch (Exception e) {
                     e.printStackTrace();
                     JOptionPane.showMessageDialog(HistoryPanel.this, "Error cancelling booking.");
+                    trigger.setEnabled(true);
+                } finally {
+                    refreshBtn.setEnabled(true);
+                }
+            }
+        }.execute();
+    }
+
+    private void deleteBooking(Booking booking, JButton trigger) {
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Delete this cancelled booking?",
+                "Confirm",
+                JOptionPane.YES_NO_OPTION
+        );
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        trigger.setEnabled(false);
+        refreshBtn.setEnabled(false);
+
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() {
+                return BookingController.getInstance()
+                        .deleteCancelledBooking(booking.getId(), currentUser.getId());
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    if (get()) {
+                        JOptionPane.showMessageDialog(HistoryPanel.this, "Booking deleted.");
+                        loadHistory();
+                    } else {
+                        JOptionPane.showMessageDialog(HistoryPanel.this, "Unable to delete booking.");
+                        trigger.setEnabled(true);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(HistoryPanel.this, "Error deleting booking.");
                     trigger.setEnabled(true);
                 } finally {
                     refreshBtn.setEnabled(true);

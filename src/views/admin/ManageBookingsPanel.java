@@ -58,7 +58,9 @@ public class ManageBookingsPanel extends JPanel {
         add(actionPanel, BorderLayout.NORTH);
         // Table setup
         tableModel = new DefaultTableModel(
-                new Object[] { "Booking ID", "User ID", "User", "Route", "Bus", "Departure", "Seat", "Amount", "Status", "Booked At" },0) {
+                new Object[] { "Booking ID", "User ID", "User", "Route", "Bus", "Departure", "Seat", "Amount", "Status",
+                        "Booked At" },
+                0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -83,13 +85,19 @@ public class ManageBookingsPanel extends JPanel {
 
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(DocumentEvent e) { applyFilter(); }
+            public void insertUpdate(DocumentEvent e) {
+                applyFilter();
+            }
 
             @Override
-            public void removeUpdate(DocumentEvent e) { applyFilter(); }
+            public void removeUpdate(DocumentEvent e) {
+                applyFilter();
+            }
 
             @Override
-            public void changedUpdate(DocumentEvent e) { applyFilter(); }
+            public void changedUpdate(DocumentEvent e) {
+                applyFilter();
+            }
         });
 
         loadBookings();

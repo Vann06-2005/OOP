@@ -8,7 +8,9 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -31,6 +33,16 @@ public class ManageBusesPanel extends JPanel {
     private JButton addBtn, updateBtn, deleteBtn, refreshBtn, clearBtn;
     private List<Bus> buses = new ArrayList<>();
     private Bus selectedBus;
+    private boolean suppressAutoSeat = false;
+    private static final Map<String, Integer> TYPE_SEAT_DEFAULTS = new LinkedHashMap<>();
+
+    static {
+        TYPE_SEAT_DEFAULTS.put("ac sleeper", 30);
+        TYPE_SEAT_DEFAULTS.put("seater", 40);
+        TYPE_SEAT_DEFAULTS.put("luxury volvo", 45);
+        TYPE_SEAT_DEFAULTS.put("mini bus", 20);
+        TYPE_SEAT_DEFAULTS.put("electric", 30);
+    }
 
     public ManageBusesPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -59,6 +71,7 @@ public class ManageBusesPanel extends JPanel {
         formPanel.add(new JLabel("Type:"), gbc);
         typeBox = new JComboBox<>(new String[]{"AC Sleeper", "Seater", "Luxury Volvo", "Mini Bus", "Electric"});
         typeBox.setEditable(true);
+        typeBox.addActionListener(e -> applySeatDefaultForType());
         gbc.gridx = 1;
         formPanel.add(typeBox, gbc);
 
@@ -103,6 +116,7 @@ public class ManageBusesPanel extends JPanel {
         refreshBtn.addActionListener(e -> loadBuses());
 
         loadBuses();
+        applySeatDefaultForType();
     }
         //
     private void handleAdd() {
@@ -277,7 +291,12 @@ public class ManageBusesPanel extends JPanel {
         selectedBus = buses.get(row);
         numberField.setText(selectedBus.getBusNumber());
         seatsField.setText(String.valueOf(selectedBus.getTotalSeats()));
-        typeBox.setSelectedItem(selectedBus.getType());
+        suppressAutoSeat = true;
+        try {
+            typeBox.setSelectedItem(selectedBus.getType());
+        } finally {
+            suppressAutoSeat = false;
+        }
         updateBtn.setEnabled(true);
         deleteBtn.setEnabled(true);
     }
@@ -287,9 +306,33 @@ public class ManageBusesPanel extends JPanel {
         busTable.clearSelection();
         numberField.setText("");
         seatsField.setText("");
-        typeBox.setSelectedIndex(0);
+        suppressAutoSeat = true;
+        try {
+            typeBox.setSelectedIndex(0);
+        } finally {
+            suppressAutoSeat = false;
+        }
         updateBtn.setEnabled(false);
         deleteBtn.setEnabled(false);
+    }
+
+    private void applySeatDefaultForType() {
+        if (suppressAutoSeat) {
+            return;
+        }
+        Object typeValue = typeBox.getSelectedItem();
+        if (typeValue == null) {
+            return;
+        }
+        String type = typeValue.toString().trim();
+        if (type.isEmpty()) {
+            return;
+        }
+        Integer seats = TYPE_SEAT_DEFAULTS.get(type.toLowerCase());
+        if (seats == null) {
+            return;
+        }
+        seatsField.setText(String.valueOf(seats));
     }
 
     private void toggleActions(boolean enabled) {

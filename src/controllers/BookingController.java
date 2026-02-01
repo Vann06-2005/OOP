@@ -2,6 +2,7 @@ package controllers;
 
 import db.*;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import models.*;
@@ -55,6 +56,16 @@ public class BookingController {
     }
 
     public boolean createBooking(Booking booking) {
+        if (booking == null || booking.getSchedule() == null || booking.getSchedule().getDepartureTime() == null) {
+            System.out.println("Booking failed: schedule info missing.");
+            return false;
+        }
+        LocalDateTime departureTime = booking.getSchedule().getDepartureTime();
+        if (departureTime.isBefore(LocalDateTime.now())) {
+            System.out.println("Booking rejected: schedule already departed.");
+            return false;
+        }
+
         String insertBookingSql = "INSERT INTO bookings (user_id, schedule_id, seat_number, status, total_amount, booking_date) VALUES (?, ?, ?, ?, ?, ?)";
         String updateScheduleSql = "UPDATE schedules SET available_seats = available_seats - 1 WHERE id = ? AND available_seats > 0";
 
@@ -159,10 +170,10 @@ public class BookingController {
                     // Reconstruct Objects
                     User user = new User(rs.getLong("user_id"), rs.getString("full_name"), rs.getString("password"),
                             rs.getString("role"));
-
+                    // Reconstruct Objects
                     Bus bus = new Bus(rs.getLong("bus_id"), rs.getString("bus_number"), rs.getInt("total_seats"),
                             rs.getString("bus_type"));
-
+                    // Reconstruct Objects
                     Route route = new Route(rs.getLong("route_id"), rs.getString("source_city"),
                             rs.getString("destination_city"), rs.getDouble("distance_km"),
                             rs.getString("estimated_duration"));
@@ -253,6 +264,21 @@ public class BookingController {
                     e.printStackTrace();
                 }
             }
+        }
+    }
+
+    public boolean deleteCancelledBooking(Long bookingId, Long userId) {
+        String deleteSql = "DELETE FROM bookings WHERE id = ? AND user_id = ? AND status = 'CANCELLED'";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(deleteSql)) {
+
+            stmt.setLong(1, bookingId);
+            stmt.setLong(2, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
